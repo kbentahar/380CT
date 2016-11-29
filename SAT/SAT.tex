@@ -1,0 +1,43 @@
+\documentclass[12pt]{beamer}
+\usetheme{Boadilla}
+
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+
+\author{Kamal Bentahar}
+\title{Investigating 3SAT}
+\date{\today}
+
+
+\setbeamercovered{transparent}
+\setbeamertemplate{navigation symbols}{}
+
+\begin{document}
+	\maketitle
+	
+\begin{frame}{Notation}
+	Write a formula $\phi$ in 3-CNF form
+	\[
+	\bigwedge_{i=1}^n (x_i\lor x_j\lor x_k)
+	\]
+\end{frame}
+
+\begin{frame}{Definition of the problem}
+	\begin{block}{Decisional 3SAT}
+		Given a boolean expression in 3-CNF form, decide if it is satisfiable.
+	\end{block}
+
+	\begin{block}{Computational 3SAT}
+		Given a boolean expression in 3-CNF form, find a satisfying assignment if satisfiable.
+	\end{block}
+
+	\begin{block}{Optimization 3SAT}
+		Given a boolean expression in 3-CNF form, find an assignment that minimizes the number of non-satisfying clauses.
+	\end{block}
+\end{frame}
+
+\end{document}
