@@ -62,10 +62,18 @@ instance = SAT()
 
 with open("times.csv","w") as times:
     # test exhaustive search
+    max_repeats = 128
     for n in range(10,50):
         t0 = time()    
-        for repeats in range(100): # average 100 instances
+        for repeats in range(max_repeats): # average 100 instances
             instance.random_instance(n,n)
             decision = instance.exhaustive_search()
-        times.write( str(n)+", "+str(time()-t0)+"\n" )
-    
+        t1 = time()
+        # record average time
+        times.write( str(n)+"\t"+str((t1-t0)/max_repeats)+"\n" )
+        print( str(n)+"\t"+str((t1-t0)/max_repeats) )
+        # reduce or stop averaging if it starts taking "too long"
+        if t1-t0 > 100:
+            max_repeats = max_repeats//2
+        if max_repeats < 4:
+            break
