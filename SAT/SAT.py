@@ -1,7 +1,9 @@
 import sys
 from random import randint, randrange, sample, choice, shuffle
 from itertools import chain, combinations, product
+from numpy import arange
 from time import time
+
 
 class SAT():
     def __init__(self):
@@ -51,19 +53,17 @@ class SAT():
         # if no clause is False then value is True
         return True
 
-    def ratio_satisfied(self):
+    def ratio_unsatisfied(self):
         ''' calculate ratio of satisfied clauses'''
-        count = self.nc
+        count = 0
         for c in self.clauses:
             x1,x2,x3 = self.get_variables( c )
             # if negative then negate boolean value of the variable
             if c[0]<0: x1 = not x1
             if c[1]<0: x2 = not x2
             if c[2]<0: x3 = not x3
-            # if any clause is False then the value is False
             if (x1 or x2 or x3) == False:
-                count -= 1
-        # if no clause is False then value is True
+                count += 1
         return count/self.nc
 
     def random_instance(self, nv, nc):
@@ -133,7 +133,7 @@ class SAT():
         literals_occurance.sort( key=lambda a:a[1] )
         for v in literals_occurance:
             self.set_variable( v[0] , v[0]>0 )
-        return self.ratio_satisfied()
+        return self.ratio_unsatisfied()
 
     def greedy_randomized(self, block_size=2):
         '''
@@ -151,73 +151,77 @@ class SAT():
             literals_occurance[i:i+block_size] = tmp
         for v in literals_occurance:
             self.set_variable( v[0] , v[0]>0 )
-        return self.ratio_satisfied()
+        return self.ratio_unsatisfied()
 
     def GRASP(self):
-        best = self.greedy()
-        for i in range(10):
-            candidate = self.greedy_randomized()
-            # local search
+        ''' GRASP meta-heuristic '''
+        best = 1 # i.e. start with the worst solution that satisfies no clauses
+        for i in range(100):
+            candidate = self.greedy_randomized( choice([2,3,4]) ) # random block_size from {2,3,4}
+            # local search: flip variable assignment and see if things improve
             for v in self.variables:
                 self.negate_variable_value(v)          # try changing variable v
-                if self.ratio_satisfied() < candidate: # undo if worse
+                if self.ratio_unsatisfied() > candidate: # undo if worse
                     self.negate_variable_value(v)
-            if candidate > best:
+            if candidate < best:
                 best = candidate
         return best
 
 
 instance = SAT()
 
-with open("times_grasp.csv","w") as times:
-    # test greedy search
-    max_repeats = 100
-    rho = 1  # ratio: nc/nv
-    for nv in range(10,400,10):
-        nc = rho*nv
-        q  = 0        # to measure 'quality' of solution of greedy
-        qr = 0        # to measure 'quality' of solution of greedy_randomized
-        qg = 0        # to measure 'quality' of solution of GRASP
-        for repeat in range(max_repeats):
-            instance.random_yes_instance(nv, nc)
-            q  += instance.greedy()
-            qr += instance.greedy_randomized(3)
-            qg += instance.GRASP()
-        print      ( str(nv)+"\t"+str(q/max_repeats)+"\t"+str(qr/max_repeats)+"\t"+str(qg/max_repeats) )
-        times.write( str(nv)+"\t"+str(q/max_repeats)+"\n" )
-        times.flush()
+def time_GRASP():
+    with open("times_grasp.csv","w") as times:
+        # test greedy search
+        max_repeats = 200
+        nv = 20
+        for rho in arange(0.5,7,0.1):  # rho = nc/nv
+            nc = int(rho*nv)
+            q  = 0        # to measure 'quality' of solution of greedy
+            #qr = 0        # to measure 'quality' of solution of greedy_randomized
+            qg = 0        # to measure 'quality' of solution of GRASP
+            for repeat in range(max_repeats):
+                instance.random_yes_instance(nv, nc)
+                q  += instance.greedy()
+                #qr += instance.greedy_randomized(3)
+                qg += instance.GRASP()
+            print      ( str(rho)+"\t"+str(q/max_repeats)+"\t"+str(qg/max_repeats) )
+            times.write( str(rho)+"\t"+str(q/max_repeats)+"\t"+str(qg/max_repeats) )
+            times.flush()
 
-sys.exit()
+def time_Greedy():
+    with open("times_greedy.csv","w") as times:
+        # test greedy search
+        max_repeats = 1000
+        nv = 20
+        for rho in arange(0.5,7,0.1):  # rho = nc/nv
+            nc = int(rho*nv)
+            q  = 0        # to measure 'quality' of solution
+            for repeat in range(max_repeats):
+                instance.random_yes_instance(nv, nc)
+                q += instance.greedy()
+            print      ( str(rho)+"\t"+str(q/max_repeats) )
+            times.write( str(rho)+"\t"+str(q/max_repeats)+"\n" )
+            times.flush()
 
-with open("times_greedy.csv","w") as times:
-    # test greedy search
-    max_repeats = 1000
-    rho = 10  # ratio: nc/nv
-    for nv in range(10,400,10):
-        nc = rho*nv
-        q  = 0        # to measure 'quality' of solution
-        for repeat in range(max_repeats):
-            instance.random_yes_instance(nv, nc)
-            q += instance.greedy()
-        print      ( str(nv)+"\t"+str(q/max_repeats) )
-        times.write( str(nv)+"\t"+str(q/max_repeats)+"\n" )
-        times.flush()
+def time_Exhaustive():
+    with open("times_exhaustive.csv","w") as times:
+        # test exhaustive search
+        max_repeats = 100
+        for n in range(10,50):
+            t0 = time()
+            for repeats in range(max_repeats): # e.g. average over 100 instances
+                instance.random_instance(n,n)
+                decision = instance.exhaustive_search()
+            t1 = time()
 
-sys.exit()
+            # record average time
+            print      ( str(n)+"\t"+str((t1-t0)/max_repeats) )
+            times.write( str(n)+"\t"+str((t1-t0)/max_repeats)+"\n" )
 
-with open("times_exhaustive.csv","w") as times:
-    # test exhaustive search
-    max_repeats = 100
-    for n in range(10,50):
-        t0 = time()
-        for repeats in range(max_repeats): # e.g. average over 100 instances
-            instance.random_instance(n,n)
-            decision = instance.exhaustive_search()
-        t1 = time()
+            #if t1-t0 > 60: # if it takes too long then stop testing
+            #    break
 
-        # record average time
-        print      ( str(n)+"\t"+str((t1-t0)/max_repeats) )
-        times.write( str(n)+"\t"+str((t1-t0)/max_repeats)+"\n" )
-
-        if t1-t0 > 60: # if it takes too long then stop testing
-            break
+time_Exhaustive()
+#time_Greedy()
+#time_GRASP()
